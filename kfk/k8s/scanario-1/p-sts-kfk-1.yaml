@@ -1,0 +1,203 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: kfk1
+  annotations:
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  ports:
+  - name: internal
+    port: 9093
+    protocol: TCP
+  - name: client
+    port: 9092
+    protocol: TCP   
+  - name: external
+    port: 9094
+    protocol: TCP 
+  selector:
+    app: kfk1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: kfk1
+    role: kfk1
+  name: kfk1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kfk1
+      role: kfk1
+  serviceName: kfk1
+  template:
+    metadata:
+      labels:
+        app: kfk1
+        role: kfk1
+    spec:
+      containers:
+        - env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: KAFKA_BROKER_ID
+              value: '0'      
+            - name: ZOO_CONNECT
+              value: '10.154.0.7:2181,10.154.0.8:2181,10.154.0.8:2181'
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: CLIENT
+            - name: KAFKA_PORT
+              value: '9093'  
+            - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+              value: 'INTERNAL:PLAINTEXT,CLIENT:SSL,EXTERNAL:SSL'
+            - name: KAFKA_CFG_LISTENERS
+              value: 'INTERNAL://:9093,CLIENT://:9092,EXTERNAL://:9094'
+            - name: ADVERTISED_LISTENER
+              value: 10.154.0.10:9093
+            - name: KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE
+              value: 'true'
+            - name: KAFKA_LOG_DIR
+              value: '/kafka-logs'  
+            - name: KAFKA_HEAP_OPTS
+              value: '-Xmx1024m -Xms1024m'
+            - name: KAFKA_CFG_LOG_RETENTION_CHECK_INTERVALS_MS
+              value: '300000'
+            - name: KAFKA_CFG_LOG_RETENTION_HOURS
+              value: '168'
+            - name: KAFKA_CFG_LOG_SEGMENT_BYTES
+              value: '1073741824'
+            - name: KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: '1'
+            - name: KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: '1'
+            - name: KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR
+              value: '1'
+            - name: KAFKA_CFG_NUM_IO_THREADS
+              value: '8'
+            - name: KAFKA_CFG_NUM_NETWORK_THREADS
+              value: '3'
+            - name: KAFKA_CFG_NUM_PARTITIONS
+              value: '1'
+            - name: KAFKA_CFG_NUM_RECOVERY_THREADS_PER_DATA_DIR
+              value: '1'
+            - name: KAFKA_CFG_SOCKET_RECEIVE_BUFFER_BYTES
+              value: '102400'
+            - name: KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES
+              value: '104857600'
+            - name: KAFKA_CFG_SOCKET_SEND_BUFFER_BYTES
+              value: '102400'
+            - name: KAFKA_CFG_ZOOKEEPER_CONNECTION_TIMEOUT_MS
+              value: '6000'
+            - name: KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS
+              value: '0'  
+            - name: KAFKA_CFG_CA_KEY_PASSWORD
+              value: Keypass
+            - name: KAFKA_CFG_KAFKA_INTER_BROKER_PROTOCOL
+              value: SSL
+            - name: KAFKA_CFG_SSL_PROTOCOL
+              value: TLSv1.2  
+            - name: KAFKA_CFG_SSL_CLIENT_AUTH
+              value: required      
+            - name: KAFKA_CFG_KAFKA_TRUST_STORE_PATH
+              value: /certs/kfk/kafka_truststore.jks
+            - name: KAFKA_CFG_KAFKA_KEY_STORE_PATH
+              value: /certs/kfk/kafka_keystore.jks  
+            - name: KAFKA_CFG_KAFKA_TRUST_STORE_PASSWORD
+              value: Keypass
+            - name: KAFKA_CFG_KAFKA_KEY_STORE_PASSWORD
+              value: Keypass  
+            - name: KAFKA_CFG_ZOOKEEPER_CLIENT_CNXN
+              value: org.apache.zookeeper.ClientCnxnSocketNetty
+            - name: KAFKA_CFG_ZOOKEEPER_SSL_CLIENT_ENABLE
+              value: 'true'
+            - name: KAFKA_CFG_ZOOKEEPER_SSL_PROTOCOL
+              value: TLSv1.2      
+            - name: KAFKA_CFG_ZOOKEEPER_TRUST_STORE_PASSWORD
+              value: Keypass
+            - name: KAFKA_CFG_ZOOKEEPER_KEY_STORE_PASSWORD
+              value: Keypass 
+            - name: KAFKA_CFG_ZOOKEEPER_TRUST_STORE_PATH
+              value: /certs/zoo/zoo.truststore.jks
+            - name: KAFKA_CFG_ZOOKEEPER_KEY_STORE_PATH
+              value: /certs/zoo/zoo.keystore.jks
+            - name: KAFKA_CFG_ZOOKEEPER_SET_ACL
+              value: 'true'   
+            - name: KAFKA_CFG_BOOTSTRAP_SERVERS
+              value: '$(MY_POD_NAME).kfk1.ctx1.svc.cluster.local:9092'
+            - name: KAFKA_CFG_CONSUMER_SSL_PROTOCOL
+              value: TLSv1.2
+            - name: KAFKA_CFG_CONSUMER_SECURITY_PROTOCOL
+              value: SSL 
+            - name: KAFKA_CFG_CONSUMER_TRUST_STORE_PASSWORD
+              value: Keypass
+            - name: KAFKA_CFG_CONSUMER_KEY_STORE_PASSWORD
+              value: Keypass 
+            - name: KAFKA_CFG_CONSUMER_TRUST_STORE_PATH
+              value: /certs/client/client.truststore.jks
+            - name: KAFKA_CFG_CONSUMER_KEY_STORE_PATH
+              value: /certs/client/client.keystore.jks
+            - name: KAFKA_CFG_PRODUCER_SSL_PROTOCOL
+              value: TLSv1.2
+            - name: KAFKA_CFG_PRODUCER_SECURITY_PROTOCOL
+              value: SSL 
+            - name: KAFKA_CFG_PRODUCER_TRUST_STORE_PASSWORD
+              value: Keypass
+            - name: KAFKA_CFG_PRODUCER_KEY_STORE_PASSWORD
+              value: Keypass 
+            - name: KAFKA_CFG_PRODUCER_TRUST_STORE_PATH
+              value: /certs/client/client.truststore.jks
+            - name: KAFKA_CFG_PRODUCER_KEY_STORE_PATH
+              value: /certs/client/client.keystore.jks
+          image: 'drop1/kfk:p2'
+          imagePullPolicy: Always
+          name: kafka
+          ports:
+            - containerPort: 9092
+              name: kafka-client
+              protocol: TCP
+            - containerPort: 9093
+              name: kafka-internal
+              protocol: TCP
+            - containerPort: 9094
+              name: kafka-external
+              protocol: TCP
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000     
+          volumeMounts:
+            - name: logs
+              mountPath: /kafka-logs
+            - name: kfk-certs
+              readOnly: true
+              mountPath: /certs/kfk
+            - name: client-certs
+              readOnly: true
+              mountPath: /certs/client
+            - name: zoo-certs
+              readOnly: true
+              mountPath: /certs/zoo 
+      securityContext:
+        fsGroup: 1000        
+      volumes:    
+        - name: logs
+          emptyDir: {}
+        - name: zoo-certs
+          secret:
+            secretName: zoo-certs
+        - name: client-certs
+          secret:
+            secretName: client-certs
+        - name: kfk-certs
+          secret:
+            secretName: kfk-certs-p12

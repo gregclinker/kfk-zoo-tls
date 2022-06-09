@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zkp2
+spec:
+  selector:
+    matchLabels:
+      app: zkp2
+      env: test2
+  serviceName: zkp2
+  replicas: 1
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        app: zkp2
+        env: test2
+    spec:
+      containers:
+      - name: zkp2
+        resources:
+           requests:
+             ephemeral-storage: "10Gi"
+             cpu: ".1"
+             memory: "248Mi"
+           limits:
+             ephemeral-storage: "20Gi"
+             cpu: ".2"
+             memory: "512Mi"
+        imagePullPolicy: Always
+        image: drop1/zoo:p1
+        env:
+        # - name: K8S_ZOO_REPLICAS
+        #   value: "3"
+        - name:  ZOO_MY_ID
+          value: "2"
+        - name: ZOO_SERVERS
+          value: server.1=10.154.0.7:2888:3888;2181 server.2=10.154.0.8:2888:3888;2181 server.3=10.154.0.9:2888:3888;2181
+        ports:
+        - name: tcp-client
+          containerPort: 2181
+        - name: tcp-peers
+          containerPort: 2888
+        - name: tcp-leader
+          containerPort: 3888
+        - name: http-admin
+          containerPort: 8080
+        - name: tcp-ssl
+          containerPort: 3181  
+        livenessProbe:
+          tcpSocket:
+            port: 2181
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        # readinessProbe:
+        #   exec:
+        #     command:
+        #     - /readiness.sh
+        #   initialDelaySeconds: 30
+        #   periodSeconds: 10
+        # volumeMounts:
+        # - name: zkp-volume
+        #   mountPath: /data
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      imagePullSecrets:
+        - name: regcred
+#   volumeClaimTemplates:
+#   - metadata:
+#       name: zkp-volume
+#     spec:
+#       accessModes: [ "ReadWriteOnce" ]
+#       resources:
+#         requests:
+#           storage: 10Gi
+

@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:///opt/kafka/config/log4j.properties"
+
+
+echo "JKS file /certs DIR"
+ls /certs/zoo
+ls /certs/kfk
+ls /certs/client
+# Load Consumer and Producer file with invoking variables
+
+. /opt/scripts/consumer-properties.sh
+. /opt/scripts/producer-properties.sh
+. /opt/scripts/server-properties.sh
+echo " chekcing KAFKA_CFG_ZOOKEEPER_CONNECT value from yaml"
+echo $KAFKA_CFG_ZOOKEEPER_CONNECT
+
+echo "checking producer.properties file"
+cat /opt/kafka/config/producer.properties
+echo "#########################"
+echo "checking consumer.properties file"
+cat /opt/kafka/config/consumer.properties
+
+echo "#########################"
+echo "checking server.properties file"
+cat /opt/kafka/config/server.properties
+
+
+
+
+rm -rf $KAFKA_LOG_DIR/lost+found
+
+exec "$@"

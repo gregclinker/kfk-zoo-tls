@@ -1,0 +1,51 @@
+FROM nexus3.systems.uk.hsbc:18096/com/hsbc/group/itid/es/dc/centos/gcr_centos-7:latest
+ 
+LABEL team="POL - DevOps"
+LABEL build_date="20-01-2022"
+LABEL description="Base image for Apache Kafka"
+
+ARG NEXUS_USER
+ARG NEXUS_PASS
+ARG KAFKA_VERSION=2.8.1
+ARG SCALA_VERSION=2.13
+ARG DISTRO_NAME=kafka-$KAFKA_VERSION
+ARG KAFKA_HOME=/kafka_${SCALA_VERSION}-${KAFKA_VERSION}
+ARG KAFKA_URL=https://nexus3.systems.uk.hsbc:8081/nexus/repository/misc-foss-n3p/com/hsbc/wholesale/payments/pol/org/apache/kafka
+
+
+
+ENV KAFKA_HOME=${KAFKA_HOME} \
+    KAFKA_LOG_DIR=/tmp/kafka-logs \
+    KAFKA_TOPIC_REPLICATION_DIR=1 \
+    KAFKA_HEAP_OPTS="-Xmx1G -Xms1G" \
+    PATH=$PATH:/$KAFKA_HOME/bin  \
+    KAFKA_VERSION=${KAFKA_VERSION} \
+    SCALA_VERSION=${SCALA_VERSION} \
+    KAFKA_K8S=false \
+    KAFKA_PORT=29092 \
+    KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:///etc/kafka/log4j.properties"
+
+RUN set -eux && \
+    groupadd -r kafka --gid=1000 && \
+    useradd -r -g kafka --uid=1000 kafka && \
+    curl --insecure -u $NEXUS_USER:$NEXUS_PASS -o /tmp/jdk.rpm https://nexus3.systems.uk.hsbc:8081/nexus/repository/yum-FOSS-approved/oracle/jdk/jdk-8u211-linux-x64.rpm && \
+    rpm -i /tmp/jdk.rpm && \
+    curl --insecure -u $NEXUS_USER:$NEXUS_PASS -o /tmp/${DISTRO_NAME}.tgz $KAFKA_URL/$KAFKA_VERSION/${DISTRO_NAME}.tgz && \
+    tar xvfz /tmp/${DISTRO_NAME}.tgz -C / && \
+    mkdir -p /etc/kafka && \
+    mkdir -p $KAFKA_LOG_DIR && \
+    chown -R kafka:kafka "$KAFKA_HOME" $KAFKA_LOG_DIR /etc/kafka && \
+    rm -rf  "$DISTRO_NAME.tgz" /tmp/*.rpm 
+
+WORKDIR $KAFKA_HOME
+VOLUME ["$KAFKA_LOG_DIR"]
+
+EXPOSE 9092
+
+USER kafka
+COPY --chown=kafka:kafka env_init.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["kafka-server-start.sh", "/etc/kafka/server.properties"]
+
